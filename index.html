@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aidanometer - Pyron Buff Edition</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #1a1a2e;
+      color: white;
+    }
+
+    .card {
+      background: #16213e;
+      padding: 2rem;
+      border-radius: 15px;
+      width: 420px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .score-display {
+      font-size: 4rem;
+      font-weight: bold;
+    }
+
+    .likelihood {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #0f3460;
+      font-size: 0.9rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin: 20px 0;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .section-label {
+      grid-column: span 2;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #4ecca3;
+    }
+
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-neg { background: #e94560; color: white; }
+    .btn-pos { background: #4ecca3; color: #1a1a2e; }
+    .btn-pyron { background: #6366f1; color: white; grid-column: span 2; }
+    .btn-start { background: #3b82f6; color: white; width: 100%; margin-bottom: 10px; }
+
+    .reset-btn {
+      margin-top: 20px;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>AIDANOMETER</h2>
+
+    <div id="timerDisplay">Timer Paused</div>
+
+    <button class="btn-start" onclick="startDecay()">START DECAY TIMER</button>
+
+    <div class="score-display" id="scoreText">0</div>
+
+    <input type="range" id="meter" min="-25" max="25" value="0" disabled>
+
+    <div class="likelihood" id="likelihoodText">
+      Mood: Neutral
+    </div>
+
+    <div class="button-grid">
+      <button class="btn-pyron" onclick="activatePyron()">PYRON JOINS</button>
+
+      <div class="section-label">Negative Conditions</div>
+
+      <button class="btn-neg" onclick="handleAction('gankLoss')">Gank Loss</button>
+      <button class="btn-neg" onclick="handleAction('aidanDies')">Aidan Dies</button>
+      <button class="btn-neg" onclick="handleAction('hitAidan')">Hit Aidan</button>
+      <button class="btn-neg" onclick="handleAction('lagServer')">Laggy Server</button>
+
+      <div class="section-label">Positive Conditions</div>
+
+      <button class="btn-pos" onclick="updateMeter(10)">Gank Won</button>
+      <button class="btn-pos" onclick="updateMeter(5)">Aidan Kills</button>
+      <button class="btn-pos" onclick="updateMeter(3)">Help Aidan</button>
+      <button class="btn-pos" onclick="updateMeter(5)">Good Server</button>
+    </div>
+
+    <button class="reset-btn" onclick="resetMeter()">Reset</button>
+  </div>
+
+  <script>
+    const meter = document.getElementById('meter');
+    const scoreText = document.getElementById('scoreText');
+    const likelihoodText = document.getElementById('likelihoodText');
+
+    let secondsUntilDecay = 3600;
+    let timerRunning = false;
+    let pyronBuff = 0;
+
+    const baseValues = {
+      gankLoss: -10,
+      aidanDies: -5,
+      hitAidan: -3,
+      lagServer: -5,
+    };
+
+    function activatePyron() {
+      pyronBuff = 1;
+    }
+
+    function handleAction(actionType) {
+      let penalty = baseValues[actionType] + pyronBuff;
+
+      if (meter.value <= -15) {
+        penalty = Math.round(penalty * 1.3);
+      }
+
+      updateMeter(penalty);
+    }
+
+    function updateMeter(value) {
+      const currentVal = parseInt(meter.value, 10);
+
+      if (currentVal >= 15 && value > 0) {
+        value = Math.round(value * 1.3);
+      }
+
+      const newVal = Math.max(-25, Math.min(25, currentVal + value));
+
+      meter.value = newVal;
+      scoreText.innerText = newVal;
+
+      updateLikelihood(newVal);
+    }
+
+    function updateLikelihood(score) {
+      let text = 'Mood: Neutral';
+
+      if (score <= -15) {
+        text = '🔥 DANGER ZONE — Snap backs very likely. Penalties increased 30%. Be extremely nice.';
+      } else if (score <= -10) {
+        text = '⚠ High risk of snap backs. Recommend being extra nice.';
+      } else if (score >= 15) {
+        text = '⭐ GENEROUS MOOD — Aidan likely to help. Rewards boosted 30%. Ask for items!';
+      } else if (score >= 10) {
+        text = '🙂 Friendly mood. Good time to ask Aidan for help or items.';
+      } else if (score < 0) {
+        text = '😐 Slightly irritated.';
+      } else if (score > 0) {
+        text = '🙂 Calm and cooperative.';
+      }
+
+      likelihoodText.innerText = text;
+    }
+
+    function startDecay() {
+      if (!timerRunning) {
+        timerRunning = true;
+
+        setInterval(() => {
+          secondsUntilDecay--;
+
+          if (secondsUntilDecay <= 0) {
+            updateMeter(-2);
+            secondsUntilDecay = 3600;
+          }
+
+          const mins = Math.floor(secondsUntilDecay / 60);
+          const secs = secondsUntilDecay % 60;
+
+          document.getElementById('timerDisplay').innerText =
+            `Next Decay: ${mins}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+      }
+    }
+
+    function resetMeter() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
